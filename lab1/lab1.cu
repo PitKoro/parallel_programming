@@ -99,9 +99,9 @@ int main() {
 
     for (int i = 0; i < vector_size; i++) {
         if (i != vector_size - 1) {
-            fprintf(output_file, "%e ", double(result[i]));
+            fprintf(output_file, "%.10e ", double(result[i]));
         } else {
-            fprintf(output_file, "%e", double(result[i]));
+            fprintf(output_file, "%.10e", double(result[i]));
         }
         
     }
