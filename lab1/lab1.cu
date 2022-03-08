@@ -97,7 +97,12 @@ int main() {
     FILE *output_file = fopen("output.txt", "w");
 
     for (int i = 0; i < vector_size; i++) {
-        fprintf(output_file, "%1e ", double(result[i]));
+        if (i != vector_size - 1) {
+            fprintf(output_file, "%e ", double(result[i]));
+        } else {
+            fprintf(output_file, "%e", double(result[i]));
+        }
+        
     }
 
     fclose(output_file);
