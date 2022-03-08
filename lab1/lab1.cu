@@ -62,6 +62,7 @@ int main() {
 
     int *all_numbers = new int[numbers_count];
     get_all_numbers(input_file, numbers_count, all_numbers);
+    fclose(input_file);
 
     int vector_size = all_numbers[0];
 
@@ -79,8 +80,8 @@ int main() {
     CSC(cudaMalloc(&device_second_vector, sizeof(int) * vector_size));
     CSC(cudaMalloc(&device_result_vector, sizeof(int) * vector_size));
 
-    CSC(cudaMemcpy(device_first_vector, &first_vector, sizeof(int) * vector_size, cudaMemcpyHostToDevice));
-    CSC(cudaMemcpy(device_second_vector, &second_vector, sizeof(int) * vector_size, cudaMemcpyHostToDevice));
+    CSC(cudaMemcpy(device_first_vector, first_vector, sizeof(int) * vector_size, cudaMemcpyHostToDevice));
+    CSC(cudaMemcpy(device_second_vector, second_vector, sizeof(int) * vector_size, cudaMemcpyHostToDevice));
 
     kernel<<<256, 256>>>(device_first_vector, device_second_vector, device_result_vector, vector_size);
 
