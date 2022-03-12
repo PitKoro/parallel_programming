@@ -60,11 +60,6 @@ int main() {
 
     CSC(cudaMemcpy(result, device_result_vector, sizeof(double) * (int)vector_size, cudaMemcpyDeviceToHost));
 
-    CSC(cudaFree(device_first_vector));
-    CSC(cudaFree(device_second_vector));
-    CSC(cudaFree(device_result_vector));
-
-
     // Вывод в stdout
     for (int i = 0; i < (int)vector_size; i++) {
         if (i != (int)vector_size - 1) {
@@ -74,6 +69,11 @@ int main() {
         }
         
     }
+
+	delete[] result;
+    CSC(cudaFree(device_first_vector));
+    CSC(cudaFree(device_second_vector));
+    CSC(cudaFree(device_result_vector));
 
     return 0;
 
