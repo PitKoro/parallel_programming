@@ -25,3 +25,7 @@ def image_to_bin(src, dest):
 
     with open(dest, 'wb') as f:
         f.write(res)
+
+
+# image_to_bin('../Data/in.png', '../Data/in.bin') 
+# bin_to_image('out.bin', 'out.png')

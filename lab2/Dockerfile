@@ -10,4 +10,5 @@ RUN apt-get -y install python3-pip
 RUN pip install Pillow
 
 COPY ./src/ src/
+COPY ./Data /app/Data
 

@@ -18,13 +18,11 @@ texture<uchar4, 2, cudaReadModeElementType> rgb_texture;
 
 __device__ double calculate_grad(int x, int y, int* mask)
 {
-	double bright = 0;
+	uchar4 rgb_format;
+	double bright;
 	double grad = 0;
 	int indexing_arr[3] = {-1,0,1};
-	int x_size = 3;
-	int y_size = 3;
-	int size = x_size * y_size;
-	uchar4 rgb_format;
+	int size = 9;
 	
 	for(int i = 0; i < size; i++)
 	{
@@ -40,6 +38,7 @@ __global__ void kernel(uchar4 *output, int h, int w, int* prewitt_mask_x, int* p
 {
 	int idx = blockDim.x * blockIdx.x + threadIdx.x;
 	int idy = blockDim.y * blockIdx.y + threadIdx.y;
+
 	int offset_x = blockDim.x * gridDim.x;
 	int offset_y = blockDim.y * gridDim.y;
 
@@ -52,14 +51,14 @@ __global__ void kernel(uchar4 *output, int h, int w, int* prewitt_mask_x, int* p
             pixel = tex2D(rgb_texture, x, y);
 			double grad_x = calculate_grad(x, y, prewitt_mask_x);
 			double grad_y = calculate_grad(x, y, prewitt_mask_y);
-			double grad = sqrt(grad_x * grad_x + grad_y * grad_y);
+			double total = sqrt(grad_x * grad_x + grad_y * grad_y);
 
-			if(grad > UCHAR_MAX)
+			if(total > UCHAR_MAX)
 			{ 
-				grad = UCHAR_MAX;
+				total = UCHAR_MAX;
 			}
 
-			output[y * w + x] = make_uchar4(grad, grad, grad, pixel.w);
+			output[y * w + x] = make_uchar4(total, total, total, pixel.w);
 		}
 	}
 }
@@ -81,23 +80,22 @@ int main()
 	fclose(input_file);
 
 	int size_mask = 9;
-	int prewitt_mask_x[9] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};
-	int prewitt_mask_y[9] = {-1, -1, -1, 0, 0, 0, 1, 1, 1};
+	int prewitt_mask_x[size_mask] = {-1, 0, 1, -1, 0, 1, -1, 0, 1};
+	int prewitt_mask_y[size_mask] = {-1, -1, -1, 0, 0, 0, 1, 1, 1};
 	
 	cudaArray *dev_img;
 	
 	// привязка изображения к uchar4
 	cudaChannelFormatDesc channel_desc = cudaCreateChannelDesc<uchar4>();
 
-	int *dev_prewitt_mask_x;
-	int *dev_prewitt_mask_y;
-
-	// настройка обработки изображения
 	rgb_texture.addressMode[0] = cudaAddressModeClamp;
 	rgb_texture.addressMode[1] = cudaAddressModeClamp;
 	rgb_texture.channelDesc = channel_desc;
 	rgb_texture.filterMode  = cudaFilterModePoint;
 	rgb_texture.normalized  = false;
+
+	int *dev_prewitt_mask_x;
+	int *dev_prewitt_mask_y;
 
 	CSC(cudaMalloc(&dev_prewitt_mask_x, sizeof(int) *size_mask));
 	CSC(cudaMalloc(&dev_prewitt_mask_y, sizeof(int) *size_mask));
@@ -107,12 +105,24 @@ int main()
 	CSC(cudaMemcpyToArray(dev_img, 0, 0, img, sizeof(uchar4) * w * h, cudaMemcpyHostToDevice));
 	CSC(cudaBindTextureToArray(rgb_texture, dev_img, channel_desc));
 
-
 	uchar4* dev_output_img;
 	CSC(cudaMalloc(&dev_output_img, sizeof(uchar4) * w * h));
 
-	kernel<<<512, 512>>>(dev_output_img,h,w, dev_prewitt_mask_x, dev_prewitt_mask_y);
+	cudaEvent_t start, stop;
+	cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start, 0);
 
+	kernel<<<512, 512>>>(dev_output_img, h, w, dev_prewitt_mask_x, dev_prewitt_mask_y);
+
+	cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    float t;
+    cudaEventElapsedTime(&t, start, stop);
+	printf("time: %lf\n\n", t);
+	cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+	
 	CSC(cudaGetLastError());
 	CSC(cudaMemcpy(img, dev_output_img, sizeof(uchar4) * w * h, cudaMemcpyDeviceToHost));
 	CSC(cudaUnbindTexture(rgb_texture));
@@ -123,7 +133,6 @@ int main()
 	fwrite(&h, sizeof(int), 1, output_file);
 	fwrite(img, sizeof(uchar4), w * h, output_file);
 	fclose(output_file);
-
 
 	CSC(cudaFreeArray(dev_img));
 	CSC(cudaFree(dev_output_img));
