@@ -1,0 +1,14 @@
+version: '3.9'
+services:
+  lab1:
+    build: .
+    stdin_open: true #docker run -i
+    tty: true # docker run -t
+    volumes:
+      - ./src/:/app/src
+      - ./Data/:/app/Data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
